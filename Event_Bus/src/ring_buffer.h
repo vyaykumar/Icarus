@@ -1,0 +1,6 @@
+#ifndef ICARUS_RING_BUFFER_H
+#define ICARUS_RING_BUFFER_H
+
+
+
+#endif //ICARUS_RING_BUFFER_H
