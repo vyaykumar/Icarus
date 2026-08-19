@@ -2,15 +2,15 @@
 #define ICARUS_MEMORY_POOL_H
 #include <array>
 #include <cstdint>
-#include <functional>
 #include <ranges>
+
+struct Handle {
+    uint32_t index;
+    uint32_t generation;
+};
 
 template <typename T, uint32_t Capacity>
 struct MemoryPool {
-    struct Handle {
-        uint32_t index;
-        uint32_t generation;
-    };
 
     std::array<T,Capacity> storage;
     std::array<uint32_t,Capacity> generations;
