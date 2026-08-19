@@ -5,10 +5,10 @@
 
 #pragma pack(1)
 struct Event {
-    uint64_t nano_stamp;
-    uint64_t sequence_number;
-    uint64_t payload_size;
-    uint8_t reserved[40];
+    uint64_t nano_stamp {};
+    uint64_t sequence_number {};
+    uint64_t payload_size {};
+    uint8_t reserved[40] {};
 };
 #pragma pack()
 
