@@ -17,14 +17,15 @@ struct MemoryPool {
     std::array<bool, Capacity> available;
 
     // Can be replaced with a circular index marker variable.
-    Handle allocate () {
-        for (auto& [index, free] : std::views::enumerate(available))
+    Handle allocate() {
+        for (auto [idx, free] : std::views::enumerate(available)) {
+            auto index = static_cast<uint32_t>(idx);
             if (free) {
-                free = false;
+                available[index] = false;
                 ++generations[index];
                 return {index, generations[index]};
             }
-
+        }
         return {.index = UINT32_MAX, .generation = 0};
     }
 
