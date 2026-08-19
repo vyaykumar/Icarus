@@ -14,6 +14,22 @@ struct EventBus {
     uint32_t latency_ns;
     uint32_t jitter_ns;
     float packet_loss_rate;
+
+    void send(const Event& event) {
+        command_buffer.push(event);
+    }
+
+    bool receive (Event& event) {
+        return response_buffer.pop(event);
+    }
+
+    Handle allocate_payload() {
+        return payload_pool.allocate();
+    }
+
+    uint8_t* get_payload(Handle handle) {
+        return payload_pool.get(handle);
+    }
 };
 
 #endif //ICARUS_EVENT_BUS_H
