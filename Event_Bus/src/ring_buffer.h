@@ -11,13 +11,16 @@ struct RingBuffer {
     std::atomic<uint32_t> read_index {0};
 
     void push (const Event& event) {
-        buffer[write_index++] = std::move(event);
+        uint32_t idx = write_index.load(std::memory_order_relaxed);
+        buffer[idx] = event;
+        write_index.store((idx+1) % Capacity, std::memory_order_release);
     }
 
     Event pop () {
-        auto temp = buffer[read_index];
-        buffer[read_index++] = {};
-        return std::move(temp);
+        uint32_t idx = read_index.load(std::memory_order_acquire);
+        const Event temp = buffer[idx];
+        read_index.store((idx+1) % Capacity, std::memory_order_release);
+        return temp;
     }
 
 };
