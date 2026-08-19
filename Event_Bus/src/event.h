@@ -3,6 +3,7 @@
 
 #include <cstdint>
 
+#pragma pack(1)
 struct Event {
     uint64_t nano_stamp;
     uint64_t sequence_number;
@@ -10,6 +11,7 @@ struct Event {
     uint64_t payload_size;
     uint8_t reserved[32];
 };
+#pragma pack()
 
 static_assert(sizeof(Event) == 64, "Event must be 64 bytes.");
 
