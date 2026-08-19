@@ -1,6 +1,8 @@
 #ifndef ICARUS_RING_BUFFER_H
 #define ICARUS_RING_BUFFER_H
+
 #include <atomic>
+#include <cmath>
 
 #include "event.h"
 
@@ -28,11 +30,32 @@ struct RingBuffer {
 
         if (r_idx == w_idx) return false;
 
-        const Event temp = buffer[r_idx];
         read_index.store((r_idx+1) % Capacity, std::memory_order_release);
         return true;
     }
 
+    bool is_empty() const {
+        const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
+        const uint32_t r_idx = read_index.load(std::memory_order_acquire);
+
+        return r_idx == w_idx;
+    }
+
+    bool is_full () const {
+        const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
+        const uint32_t r_idx = read_index.load(std::memory_order_acquire);
+
+        const uint32_t next_w_idx = (w_idx+1) % Capacity;
+
+        return next_w_idx == r_idx;
+    }
+
+    uint32_t size() const {
+        const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
+        const uint32_t r_idx = read_index.load(std::memory_order_acquire);
+
+        return (w_idx - r_idx + Capacity) % Capacity;
+    }
 };
 
 
