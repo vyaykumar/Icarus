@@ -1,4 +1,5 @@
 #include <gtest/gtest.h>
+
 #include "../src/ring_buffer.h"
 #include "../src/memory_pool.h"
 #include "../src/event_bus.h"
@@ -8,11 +9,11 @@ TEST(RingBufferTest, PushAndPop) {
     Event event = {};
     event.nano_stamp = 12345;
 
-    bool pushed = buffer.push(event);
+    const bool pushed = buffer.push(event);
     ASSERT_TRUE(pushed);
 
     Event received = {};
-    bool popped = buffer.pop(received);
+    const bool popped = buffer.pop(received);
     ASSERT_TRUE(popped);
 }
 
@@ -20,7 +21,7 @@ TEST(RingBufferTest, EmptyBuffer) {
     RingBuffer<16> buffer;
 
     Event event = {};
-    bool popped = buffer.pop(event);
+    const bool popped = buffer.pop(event);
     ASSERT_FALSE(popped);
 }
 
@@ -86,7 +87,7 @@ TEST(EventBusTest, SendAndReceive) {
     bus.send(event);
 
     Event received{};
-    bool success = bus.command_buffer.pop(received);
+    const bool success = bus.command_buffer.pop(received);
     ASSERT_TRUE(success);
     ASSERT_EQ(received.nano_stamp, 12345);
     ASSERT_EQ(received.sequence_number, 1);
