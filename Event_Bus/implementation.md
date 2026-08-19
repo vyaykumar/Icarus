@@ -1,5 +1,3 @@
-# Event Bus Phase 1 Implementation Notes
-
 ## Event Structure (event.h)
 
 - 64 bytes, `#pragma pack(1)` for tight packing
@@ -16,22 +14,28 @@
 - `Event buffer[Capacity]`: fixed-size circular buffer
 - `std::atomic<uint32_t> write_index`: producer position
 - `std::atomic<uint32_t> read_index`: consumer position
-- `push(const Event&)`: returns bool, uses `memory_order_release`
-- `pop(Event&)`: returns bool, uses `memory_order_acquire`
+- Methods:
+    - `bool push(const Event&)`: write event, release semantics, returns false if full
+    - `bool pop(Event&)`: read event, acquire semantics, returns false if empty
+    - `bool is_empty() const`: check if buffer has no events
+    - `bool is_full() const`: check if buffer cannot accept events
+    - `uint32_t size() const`: return count of events in buffer
 - Wrapping with modulo `%` Capacity on both indices
 - Full check: `next_write == read_idx`
 - Empty check: `write_idx == read_idx`
 
 ## MemoryPool (memory_pool.h)
 
+- Struct: `Handle` with index and generation fields
 - Template: `MemoryPool<typename T, uint32_t Capacity>`
 - `std::array<T, Capacity> storage`: pre-allocated objects
 - `std::array<uint32_t, Capacity> generations`: version counter per slot
 - `std::array<bool, Capacity> available`: free slot tracking
-- Handle struct: index and generation pair
-- Allocate increments generation on reuse
-- Deallocate marks slot available
-- Access validates generation matches
+- Methods:
+    - `Handle allocate()`: find available slot, increment generation, mark unavailable, return Handle
+    - `void deallocate(Handle)`: validate generation, mark slot available
+    - `T* get(Handle)`: validate generation, return pointer to object or nullptr
+- Generation validation catches use-after-free
 
 ## EventBus (event_bus.h)
 
@@ -42,10 +46,17 @@
 - `uint32_t latency_ns`: fixed delay simulation
 - `uint32_t jitter_ns`: random delay variation
 - `float packet_loss_rate`: drop probability (0.0 to 1.0)
+- Methods:
+    - `void send(const Event&)`: write event to command buffer
+    - `bool receive(Event&)`: read event from response buffer, returns false if empty
+    - `Handle allocate_payload()`: allocate slot in payload pool, return Handle
+    - `uint8_t* get_payload(Handle)`: retrieve payload pointer, return nullptr if invalid Handle
+- Payload size stored in `event.payload_size`
+- Zero-copy threshold configured but not yet implemented
 
 ## Next Steps
 
-- Implement allocate/deallocate in MemoryPool
-- Implement send/receive in EventBus
+- Add latency, jitter, and packet loss simulation to send/receive
+- Implement zero-copy path for payloads above threshold
 - Add guard pages for buffer overflow detection
-- Implement zero-copy path for large payloads
+- Write unit tests for boundary cases and heavy load
