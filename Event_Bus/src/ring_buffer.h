@@ -24,13 +24,14 @@ struct RingBuffer {
         return true;
     }
 
-    bool pop () {
+    bool pop(Event& event) {
         const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
         const uint32_t r_idx = read_index.load(std::memory_order_acquire);
 
         if (r_idx == w_idx) return false;
 
-        read_index.store((r_idx+1) % Capacity, std::memory_order_release);
+        event = buffer[r_idx];
+        read_index.store((r_idx + 1) % Capacity, std::memory_order_release);
         return true;
     }
 

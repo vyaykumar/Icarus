@@ -16,6 +16,10 @@ struct MemoryPool {
     std::array<uint32_t,Capacity> generations;
     std::array<bool, Capacity> available;
 
+    MemoryPool() {
+        available.fill(true);
+    }
+
     // Can be replaced with a circular index marker variable.
     Handle allocate() {
         for (auto [idx, free] : std::views::enumerate(available)) {
