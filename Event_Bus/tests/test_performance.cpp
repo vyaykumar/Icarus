@@ -8,7 +8,7 @@
 #include "../src/event_bus.h"
 
 TEST(PerformanceBenchmark, LatencyAndThroughput) {
-    constexpr uint32_t buffer_size = 1024*1;
+    constexpr uint32_t buffer_size = 1024*64;
     RingBuffer<buffer_size> buffer;
 
     std::atomic<bool> producer_ready{false};
