@@ -8,6 +8,9 @@
 
 template <uint32_t Capacity>
 struct RingBuffer {
+    static_assert((Capacity & Capacity-1) == 0, "Capacity must be a power of 2.");
+    static constexpr uint32_t MASK = Capacity - 1;
+
     Event buffer [Capacity];
     std::atomic<uint32_t> write_index {0};
     std::atomic<uint32_t> read_index {0};
@@ -15,12 +18,12 @@ struct RingBuffer {
     bool push (const Event& event) {
         const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
         const uint32_t r_idx = read_index.load(std::memory_order_acquire);
-        const uint32_t next_w_idx = (w_idx+1) % Capacity;
+        const uint32_t next_w_idx = (w_idx+1) & MASK;
 
         if (next_w_idx == r_idx) return false;
 
-        buffer[w_idx] = event;
-        write_index.store((w_idx+1) % Capacity, std::memory_order_release);
+        buffer[w_idx & MASK] = event;
+        write_index.store(next_w_idx, std::memory_order_release);
         return true;
     }
 
@@ -30,32 +33,32 @@ struct RingBuffer {
 
         if (r_idx == w_idx) return false;
 
-        event = buffer[r_idx];
-        read_index.store((r_idx + 1) % Capacity, std::memory_order_release);
+        event = buffer[r_idx & MASK];
+        read_index.store((r_idx + 1) & MASK, std::memory_order_release);
         return true;
     }
 
-    bool is_empty() const {
+    [[nodiscard]] bool is_empty() const {
         const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
         const uint32_t r_idx = read_index.load(std::memory_order_acquire);
 
         return r_idx == w_idx;
     }
 
-    bool is_full () const {
+    [[nodiscard]] bool is_full () const {
         const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
         const uint32_t r_idx = read_index.load(std::memory_order_acquire);
 
-        const uint32_t next_w_idx = (w_idx+1) % Capacity;
+        const uint32_t next_w_idx = (w_idx+1) & MASK;
 
         return next_w_idx == r_idx;
     }
 
-    uint32_t size() const {
+    [[nodiscard]] uint32_t size() const {
         const uint32_t w_idx = write_index.load(std::memory_order_relaxed);
         const uint32_t r_idx = read_index.load(std::memory_order_acquire);
 
-        return (w_idx - r_idx + Capacity) % Capacity;
+        return (w_idx - r_idx + Capacity) & MASK;
     }
 };
 

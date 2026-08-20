@@ -11,32 +11,43 @@ TEST(PerformanceBenchmark, LatencyAndThroughput) {
     constexpr uint32_t buffer_size = 1024*1;
     RingBuffer<buffer_size> buffer;
 
-    const auto start = std::chrono::high_resolution_clock::now();
+    std::atomic<bool> producer_ready{false};
+    std::atomic<bool> consumer_ready{false};
 
-    auto producer = std::jthread([&buffer] {
+    double latency;
+    double throughput;
+
+    auto producer = std::jthread([&] {
+        producer_ready.store(true);
+        while (!consumer_ready.load()) {}
+
+        const auto start = std::chrono::high_resolution_clock::now();
+
         for (uint32_t idx {}; idx < buffer_size; ++idx) {
             Event event {.nano_stamp = idx};
-            while(!buffer.push(event));
+            while (!buffer.push(event)) {}
         }
+
+        const auto end = std::chrono::high_resolution_clock::now();
+        const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
+
+        latency = static_cast<double>(elapsed.count()) / buffer_size;
+        throughput = (buffer_size * 1e9) / elapsed.count();
     });
 
-    auto consumer = std::jthread([&buffer] {
+    auto consumer = std::jthread([&] {
+        consumer_ready.store(true);
+        while (!producer_ready.load()) {}
+
         for (uint32_t idx {}; idx < buffer_size; ++idx) {
             Event event {};
             while(!buffer.pop(event));
         }
     });
 
-    const auto end = std::chrono::high_resolution_clock::now();
-    const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end-start);
+    std::cout << "Latency: " << latency << " ns\n";
+    std::cout << "Throughput: " << throughput << " events/sec\n";
 
-    const auto latency_per_event = elapsed/buffer_size;
-
-    double throughput_eps = (buffer_size * 1e9) / elapsed.count();
-
-    std::cout << "Latency per event: " << latency_per_event.count() << " ns\n";
-    std::cout << "Throughput: " << throughput_eps << " events/sec\n";
-
-    ASSERT_TRUE(latency_per_event <= std::chrono::nanoseconds(500));
-    ASSERT_TRUE(throughput_eps >= 1e6);
+    ASSERT_TRUE(latency <= 500);
+    ASSERT_TRUE(throughput >= 1e6);
 }
