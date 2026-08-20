@@ -14,10 +14,11 @@ TEST(PerformanceBenchmark, LatencyAndThroughput) {
     std::atomic<bool> producer_ready{false};
     std::atomic<bool> consumer_ready{false};
 
-    double latency;
-    double throughput;
+    std::atomic<double> latency {0};
+    std::atomic<double> throughput {0};
 
-    auto producer = std::jthread([&] {
+    {
+        auto producer = std::jthread([&] {
         producer_ready.store(true);
         while (!consumer_ready.load()) {}
 
@@ -31,22 +32,23 @@ TEST(PerformanceBenchmark, LatencyAndThroughput) {
         const auto end = std::chrono::high_resolution_clock::now();
         const auto elapsed = std::chrono::duration_cast<std::chrono::nanoseconds>(end - start);
 
-        latency = static_cast<double>(elapsed.count()) / buffer_size;
-        throughput = (buffer_size * 1e9) / elapsed.count();
+        latency.store(static_cast<double>(elapsed.count()) / buffer_size);
+        throughput.store((buffer_size * 1e9) / elapsed.count());
     });
 
-    auto consumer = std::jthread([&] {
-        consumer_ready.store(true);
-        while (!producer_ready.load()) {}
+        auto consumer = std::jthread([&] {
+            consumer_ready.store(true);
+            while (!producer_ready.load()) {}
 
-        for (uint32_t idx {}; idx < buffer_size; ++idx) {
-            Event event {};
-            while(!buffer.pop(event));
-        }
-    });
+            for (uint32_t idx {}; idx < buffer_size; ++idx) {
+                Event event {};
+                while(!buffer.pop(event));
+            }
+        });
+    }
 
-    std::cout << "Latency: " << latency << " ns\n";
-    std::cout << "Throughput: " << throughput << " events/sec\n";
+    std::cout << "Latency: " << latency.load() << " ns\n";
+    std::cout << "Throughput: " << throughput.load() << " events/sec\n";
 
     ASSERT_TRUE(latency <= 500);
     ASSERT_TRUE(throughput >= 1e6);

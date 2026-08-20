@@ -8,7 +8,7 @@
 
 template <uint32_t Capacity>
 struct RingBuffer {
-    static_assert((Capacity & Capacity-1) == 0, "Capacity must be a power of 2.");
+    static_assert((Capacity & (Capacity - 1)) == 0, "Capacity must be a power of 2.");
     static constexpr uint32_t MASK = Capacity - 1;
 
     Event buffer [Capacity];
