@@ -1,0 +1,10 @@
+# All CMake build output directories
+build/
+cmake-build-*/
+
+# CLion / JetBrains IDE configuration
+.idea/
+
+# Windows / OS specific temp files
+Thumbs.db
+.DS_Store
