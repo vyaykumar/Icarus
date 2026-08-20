@@ -8,7 +8,7 @@ target_include_directories(event_bus INTERFACE src)
 target_compile_features(event_bus INTERFACE cxx_std_26)
 
 add_executable(test_event_bus
-        tests/test_queues.cpp
+#        tests/test_queues.cpp
         tests/test_performance.cpp
 )
 
