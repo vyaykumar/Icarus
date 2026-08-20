@@ -63,7 +63,7 @@
 - **Benchmark:** 1 million events, power-of-two 65536-byte buffer, concurrent producer/consumer
 - Note: 500ns target requires CPU affinity and dedicated cores (deferred to Phase 2)
 
-```commandline
+```
 Number of Events:   1000000.
 Buffer Size:        1024*64 bytes.
 
