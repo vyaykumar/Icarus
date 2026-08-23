@@ -12,17 +12,21 @@ namespace icarus::core {
     /// @param thread Reference to the thread object.
     /// @param core_id The CPU core identifier (0-indexed).
     /// @throws std::runtime_error if pthread_setaffinity_np fails.
-    inline void bind_thread_to_core(std::thread& thread, const int core_id) {
-        if (core_id < 0)
+    template <typename ThreadType>
+inline void bind_thread_to_core(ThreadType& thread, int core_id) {
+        if (core_id < 0) {
             throw std::runtime_error("Core ID must be non-negative");
+        }
 
-        const auto handle = thread.native_handle();
+        pthread_t native_handle = thread.native_handle();
+        cpu_set_t cpu_set;
+        CPU_ZERO(&cpu_set);
+        CPU_SET(core_id, &cpu_set);
 
-        cpu_set_t cpu_id; CPU_ZERO(&cpu_id);
-        CPU_SET(core_id, &cpu_id);
-
-        if (const int result = pthread_setaffinity_np(handle, sizeof(cpu_id), &cpu_id); result != 0)
-            throw std::runtime_error("Failed to bind to core " + std::to_string(core_id));
+        int result = pthread_setaffinity_np(native_handle, sizeof(cpu_set_t), &cpu_set);
+        if (result != 0) {
+            throw std::runtime_error("Failed to bind thread to core " + std::to_string(core_id));
+        }
     }
 
 }  // namespace icarus::core

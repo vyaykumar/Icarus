@@ -42,7 +42,7 @@ public:
 
     /// Start the producer thread. Pins it to core 1.
     void start() {
-        if (worker_) return;
+        if (worker_.joinable()) return;
         if (event_bus_ == nullptr) throw std::runtime_error("Event bus isn't initialized.");
 
         shutdown_flag_.store(false, std::memory_order_release);
