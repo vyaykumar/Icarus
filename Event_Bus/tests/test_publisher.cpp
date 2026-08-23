@@ -6,19 +6,18 @@
 
 using namespace icarus::publisher;
 
-TEST(PublisherTest, StartAndWait) {
-    // TODO: Create or mock an EventBus instance.
-    EventBus<32, 64> bus;
 
-    // TODO: Instantiate Publisher<EventBus> with the event bus.
+/// Tests if
+/// 1. Thread starts AND binds to core 1.
+/// 2. Prints a debug message.
+/// 3. Conditional Variable works.
+/// 4. wait() shuts down cleanly.
+/// No Exception thrown.
+TEST(PublisherTest, StartAndWait) {
+    EventBus<32, 64> bus;
     Publisher publisher (bus);
 
-    // TODO: Call start().
     ASSERT_NO_THROW(publisher.start());
-
-    // TODO: Sleep for 100 milliseconds.
     std::this_thread::sleep_for(std::chrono::milliseconds(100));
-
-    // TODO: Call wait().
     ASSERT_NO_THROW(publisher.wait());
 }
