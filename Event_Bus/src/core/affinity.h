@@ -1,7 +1,7 @@
 #ifndef ICARUS_AFFINITY_H
 #define ICARUS_AFFINITY_H
 
-#include <assert.h>
+#include <cassert>
 #include <thread>
 #include <pthread.h>
 #include <stdexcept>
