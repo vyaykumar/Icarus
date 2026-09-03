@@ -9,7 +9,7 @@ set(CMAKE_C_STANDARD_REQUIRED ON)
 
 add_compile_options(-O2 -Wall -Wextra -Wpedantic -g)
 
-add_subdirectory(Event_Bus)
+add_subdirectory(transport-layer)
 
 add_executable(Icarus main.cpp)
 target_link_libraries(Icarus event_bus)

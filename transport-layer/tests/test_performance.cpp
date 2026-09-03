@@ -4,8 +4,8 @@
 #include <thread>
 
 #include "../src/ring_buffer.h"
-#include "../src/memory_pool.h"
-#include "../src/event_bus.h"
+#include "../src/transport/memory_pool.h"
+#include "../src/transport/event_bus.h"
 #include "latency_utils.h"
 
 TEST(PerformanceBenchmark, EndToEndLatencyAndThroughput) {

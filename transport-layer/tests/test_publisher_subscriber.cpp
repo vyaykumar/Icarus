@@ -1,7 +1,7 @@
 #include <gtest/gtest.h>
 #include <chrono>
 #include <thread>
-#include "../src/event_bus.h"
+#include "../src/transport/event_bus.h"
 #include "../src/publisher/publisher.h"
 #include "../src/subscriber/subscriber.h"
 
