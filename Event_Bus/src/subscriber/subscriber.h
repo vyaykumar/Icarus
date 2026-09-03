@@ -19,7 +19,7 @@ public:
 
     /// Parametrized constructor. Stores reference to the event bus.
     /// @param event_bus Reference to the ring buffer event bus.
-    explicit Subscriber(EventBus& event_bus) : event_bus_(&event_bus) {}
+    explicit Subscriber(EventBus& event_bus) : event_bus_(event_bus) {}
 
     Subscriber (const Subscriber& other) = delete;
     Subscriber& operator=(const Subscriber& other) = delete;
@@ -43,7 +43,6 @@ public:
     /// Start the producer thread. Pins it to core 1.
     void start() {
         if (worker_.joinable()) return;
-        if (event_bus_ == nullptr) throw std::runtime_error("Event bus isn't initialized.");
 
         shutdown_flag_.store(false, std::memory_order_release);
         worker_ = std::jthread([this] { run(); });
@@ -62,10 +61,10 @@ public:
     }
 
 private:
-    /// Worker thread entry point. Binds to core 1 and enters the event loop.
+    /// Worker thread entry point. Binds to core 2 and enters the event loop.
     void run() {
         core::bind_thread_to_core(worker_, 2);
-        std::cout << "Debug: Thread started.\n";
+        std::cout << "Debug: Subscriber thread bound to Core_2.\n";
         while (!shutdown_flag_.load(std::memory_order::relaxed)) {
             std::unique_lock lock (notify_mutex_);
             notify_cv_.wait(lock);
@@ -73,11 +72,32 @@ private:
             if (shutdown_flag_.load(std::memory_order::relaxed)) break;
 
             //ingress placeholder.
-            std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+            // std::this_thread::sleep_for(std::chrono::nanoseconds(50));
+
+            Event event;
+            if (!event_bus_.pop(event)) {
+                continue;
+            }
+
+            Handle handle = event.payload_handle;
+
+            uint8_t* payload = event_bus_.get_payload(handle);
+            if (!payload) {
+                std::cerr << "Failed to resolve payload.\n";
+                continue;
+            }
+
+            auto* data = reinterpret_cast<uint64_t*> (payload);
+            if (data) {
+                uint64_t value = *data;
+                std::cout << "Subscriber received payload: " << value << "\n";
+            }
+
+            event_bus_.deallocate_payload(handle);
         }
     }
 
-    EventBus* event_bus_ = nullptr;
+    EventBus& event_bus_ {};
     std::jthread worker_;
     std::atomic<bool> shutdown_flag_{false};
     std::mutex notify_mutex_;

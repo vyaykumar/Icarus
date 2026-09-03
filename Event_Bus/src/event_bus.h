@@ -56,6 +56,18 @@ struct EventBus {
         return payload_pool.allocate();
     }
 
+    void deallocate_payload (Handle handle) {
+        payload_pool.deallocate(handle);
+    }
+
+    void push (const Event& event) {
+        command_buffer.push(event);
+    }
+
+    bool pop (Event& event) {
+        return command_buffer.pop(event);
+    }
+
     uint8_t* get_payload(Handle handle) {
         return payload_pool.get(handle);
     }

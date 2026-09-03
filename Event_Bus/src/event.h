@@ -3,12 +3,15 @@
 
 #include <cstdint>
 
+#include "memory_pool.h"
+
 #pragma pack(1)
 struct Event {
     uint64_t nano_stamp {};
     uint64_t sequence_number {};
     uint64_t payload_size {};
-    uint8_t reserved[40] {};
+    Handle payload_handle {};
+    uint8_t reserved[32] {};
 };
 #pragma pack()
 
