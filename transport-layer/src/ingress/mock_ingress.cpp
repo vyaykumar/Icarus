@@ -37,3 +37,21 @@ MockIngressSource::MockIngressSource()
         pregenerated_frames_.push_back(frame);
     }
 }
+
+size_t MockIngressSource::poll(uint8_t* destination_buffer, size_t max_len) {
+    if (current_frame_index_ >= 1000) return 0;
+
+    auto curr_frame = pregenerated_frames_[current_frame_index_];
+    auto remains = 128 - current_offset_;
+    auto bytes_to_copy = std::min(max_len, remains);
+
+    std::memcpy(destination_buffer, &curr_frame[current_offset_], bytes_to_copy);
+
+    current_offset_ += bytes_to_copy;
+    if (current_offset_ == 128) {
+        current_frame_index_++;
+        current_offset_ = 0;
+    }
+
+    return bytes_to_copy;
+}

@@ -3,9 +3,9 @@
 
 #include <cstdint>
 
-class IIngressReceiver {
+class IngressReceiver {
 public:
-    virtual ~IIngressReceiver() = default;
+    virtual ~IngressReceiver() = default;
 
     virtual std::size_t poll(uint8_t* destination_buffer, std::size_t max_len) = 0;
 };

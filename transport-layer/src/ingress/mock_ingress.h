@@ -5,7 +5,7 @@
 #include <vector>
 #include <cstdint>
 
-class MockIngressSource : public IIngressReceiver {
+class MockIngressSource : public IngressReceiver {
 private:
     std::vector<std::vector<uint8_t>> pregenerated_frames_;
     size_t current_frame_index_;
