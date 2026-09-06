@@ -16,6 +16,7 @@ public:
     void start();
     void wait();
     uint64_t sequence_count() const;
+    const std::vector<uint64_t>& get_latencies() const;
 
 private:
     IngressReceiver& ingress_;
@@ -25,6 +26,7 @@ private:
     uint64_t sequence_counter_;
     std::atomic<bool> shutdown_flag_;
     std::jthread worker_;
+    std::vector<uint64_t> work_latencies_;
 
     void work_loop_ ();
 };
@@ -75,10 +77,16 @@ void EventDirector<EventBus>::work_loop_() {
             };
 
             event_bus_.push (event);
+            auto push_time = std::chrono::high_resolution_clock::now().time_since_epoch().count();
+            work_latencies_.push_back(push_time - event.nano_stamp);
         }
 
-        std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+        std::this_thread::sleep_for(std::chrono::nanoseconds(10));
     }
+}
+template<typename EventBus>
+const std::vector<uint64_t>& EventDirector<EventBus>::get_latencies() const {
+    return work_latencies_;
 }
 
 #endif //ICARUS_EVENT_DIRECTOR_H

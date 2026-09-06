@@ -90,6 +90,9 @@ private:
 
                 event_bus_.deallocate_payload(handle);
             }
+            else {
+                std::this_thread::sleep_for(std::chrono::nanoseconds(100));
+            }
         }
     }
 

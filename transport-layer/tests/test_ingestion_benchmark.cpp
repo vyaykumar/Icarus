@@ -12,7 +12,7 @@
 
 TEST(IngestionBenchmark, EventDirector_Latency_And_Throughput) {
     MockIngressSource ingress;
-    EventBus<8192, 8192> event_bus;
+    EventBus<16384, 16384> event_bus;
     Publisher publisher (event_bus);
     EventDirector director (ingress, publisher, event_bus);
 
@@ -25,20 +25,9 @@ TEST(IngestionBenchmark, EventDirector_Latency_And_Throughput) {
 
     const auto end = std::chrono::high_resolution_clock::now().time_since_epoch().count();
     const auto elapsed = end - start;
-    // const auto latency {elapsed/1000};
     double throughput = (1000.0 / elapsed) * 1e9;
 
-    std::vector<uint64_t> latencies;
-    Event event;
-    uint64_t first_timestamp = 0;
-
-    while (event_bus.pop(event)) {
-        if (first_timestamp == 0)
-            first_timestamp = event.nano_stamp;
-
-        uint64_t event_latency = event.nano_stamp - first_timestamp;
-        latencies.push_back(event_latency);
-    }
+    auto latencies = director.get_latencies();
 
     uint64_t p50 = calculate_percentile_linear(latencies, 50.0);
     uint64_t p95 = calculate_percentile_linear(latencies, 95.0);
@@ -52,6 +41,41 @@ TEST(IngestionBenchmark, EventDirector_Latency_And_Throughput) {
     std::cout << "P95 latency: " << p95 << " ns\n";
     std::cout << "P99 latency: " << p99 << " ns\n\n";
 
-    EXPECT_LT(p50, 100000);   // 100µs (WSL overhead)
-    EXPECT_GT(throughput, 1000);  // 1K events/sec (realistic for WSL)
+    EXPECT_LT(p50, 1000);      // 1µs (sub-microsecond)
+    EXPECT_GT(throughput, 10000);  // 10K events/sec (WSL constraint)
+
+    // EXPECT_LT(p50, 100000);   // 100µs (WSL overhead)
+    // EXPECT_GT(throughput, 1000);  // 1K events/sec (realistic for WSL)
 }
+/// With WSL overhead
+/// Subscriber busy-waiting
+// === Ingestion Benchmark Results ===
+// EventBus size = 8192
+// Events processed: 1000
+// Total time: 101360499 ns
+// Throughput: 9865.78 events/sec
+// P50 latency: 110 ns
+// P95 latency: 272 ns
+// P99 latency: 608 ns
+
+/// With WSL overhead
+/// Subscriber yielding
+// === Ingestion Benchmark Results === (With WSL overhead, but )
+// Events processed: 1000
+// Total time: 91369787 ns
+// Throughput: 10944.5 events/sec
+// P50 latency: 61 ns
+// P95 latency: 175 ns
+// P99 latency: 336 ns
+
+/// With WSL overhead
+/// Subscriber yielding
+/// 16384 EventBus, previously 8192
+/// 10ns Director sleep, previously 100ns
+// === Ingestion Benchmark Results ===
+// Events processed: 1000
+// Total time: 91742703 ns
+// Throughput: 10900 events/sec
+// P50 latency: 56 ns
+// P95 latency: 248 ns
+// P99 latency: 531 ns
