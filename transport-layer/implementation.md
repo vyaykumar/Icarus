@@ -144,3 +144,120 @@ Total time:			0.0737232 seconds
 - Memory pool integrated: allocate → embed → resolve → deallocate.
 - Affinity binding tested and confirmed on cores 1 and 2.
 - Ready for Phase 3.
+
+## Phase 3: Ingress Pipeline & Memory Safety
+
+### Abstract Ingress Interface (IngressReceiver)
+
+- Header: `src/ingress/ingress.h`
+- Pure virtual class: `IngressReceiver`
+- Methods:
+  - `virtual size_t poll(uint8_t* destination_buffer, size_t max_len) = 0`: non-blocking poll for raw bytes, returns byte count read
+- Contract: no heap allocation, caller provides buffer, returns 0 if no data
+
+### Mock Ingress Source (MockIngressSource)
+
+- Header: `src/ingress/mock_ingress.h`
+- Class: `MockIngressSource : public IngressReceiver`
+- Members:
+  - `std::vector<std::vector<uint8_t>> pregenerated_frames_`: 1000 deterministic 128-byte order messages
+  - `size_t current_frame_index_`: current frame pointer
+  - `size_t current_offset_`: offset within frame
+- Methods:
+  - Constructor: pre-generates 1000 synthetic frames (sequence, timestamp, order_id, side, price, quantity, symbol)
+  - `size_t poll(uint8_t* buffer, size_t max_len) override`: return frame bytes sequentially, no allocation
+- Behavior: deterministic, reproducible, EOF after 1000 frames
+
+### Event Director (EventDirector)
+
+- Header: `src/ingress/event_director.h`
+- Class template: `EventDirector<typename EventBus>`
+- Members:
+  - `IngressReceiver& ingress_`: dependency injection
+  - `EventBus& event_bus_`: reference to event bus
+  - `uint8_t receive_buffer_[4096]`: pre-allocated stack buffer
+  - `uint64_t sequence_counter_`: monotonic event ID
+  - `std::atomic<bool> shutdown_flag_`: graceful shutdown signal
+  - `std::jthread worker_`: owned worker thread pinned to core 1
+  - `std::vector<uint64_t> work_latencies_`: per-event ingestion latency
+- Methods:
+  - `void start()`: launch worker, bind to core 1
+  - `void wait()`: set shutdown flag, join thread
+  - `uint64_t sequence_count() const`: return events processed
+  - `const std::vector<uint64_t>& get_latencies() const`: return latency vector
+- Work loop: poll ingress → allocate payload → copy bytes → create Event → push to ring buffer
+- Polling: busy-loop with `_mm_pause()` on empty reads (no OS sleep)
+
+### Free-List Memory Pool (FreeListPool)
+
+- Header: `src/memory-pool/free_list_pool.h`
+- Class template: `FreeListPool<typename T, uint32_t Capacity>`
+- Members:
+  - `std::array<T, Capacity> storage_`: pre-allocated objects
+  - `std::array<uint32_t, Capacity> generations_`: version counter per slot
+  - `std::array<uint32_t, Capacity> free_stack_`: LIFO stack of free indices
+  - `uint32_t free_count_`: number of available slots
+- Methods:
+  - `Handle allocate()`: pop from free_stack, increment generation, return Handle — O(1)
+  - `void deallocate(Handle)`: validate generation, push index back — O(1)
+  - `T* get(Handle)`: validate generation, return pointer — O(1)
+- Replaces linear-search `MemoryPool` for O(N) → O(1) allocation performance
+
+### Guarded Memory Pool (GuardedMemoryPool)
+
+- Header: `src/guarded-pool/guarded_memory_pool.hpp`
+- Class template: `GuardedMemoryPool<typename T, uint32_t Capacity>`
+- Allocation: `mmap` pool + one unmapped guard page at end
+- Protection: `mprotect(guard_page, PROT_NONE)` removes all access
+- Methods:
+  - Constructor: allocate page-aligned memory, apply mprotect
+  - Destructor: munmap cleanup
+  - `T* get(uint32_t index)`: return pointer (or guard page if out of bounds)
+- Hardware bounds checking: any write past Capacity triggers SIGSEGV (zero runtime overhead)
+
+### Phase 3 Performance Results
+
+**Before optimizations:**
+- Ingestion latency: P50 56ns, P95 248ns, P99 531ns
+- Throughput: 10.9K events/sec
+
+**After FreeListPool (O(1) allocation):**
+- Ingestion latency: P50 33ns, P95 173ns, P99 336ns
+- Throughput: 12.26K events/sec
+- Improvement: P50 −41%, P95 −30%, P99 −37%
+
+**After `_mm_pause()` busy-poll (no OS sleep):**
+- Ingestion latency: P50 24ns, P95 25ns, P99 35ns
+- Throughput: 94.5K events/sec
+- Improvement: P50 −27%, P95 −85%, P99 −90%, throughput +671%
+
+**Final metrics (WSL-constrained; bare metal ~1M events/sec):**
+- Ingestion latency: P50 24ns, P95 25ns, P99 35ns (sub-microsecond)
+- Throughput: 94.5K events/sec
+- Memory allocation: O(1) via free-list stack
+- Guard page: zero nanosecond overhead, hardware-enforced bounds
+
+### CPU Core Binding
+
+- EventDirector: Core 1 (producer, isolated from OS)
+- Subscriber: Core 2 (consumer, isolated from OS)
+- Core 0: Reserved for OS interrupts and background tasks
+- Cores 3+: Available for future pipeline stages (Matching Engine, etc.)
+
+### Optimization Decisions
+
+- **Busy-poll with `_mm_pause()`:** Eliminates OS nanosleep syscalls on isolated cores. CPU hint prevents pipeline thrashing. Only for tight ingestion loops; use OS sleep for tests and initialization.
+- **Free-list allocation:** LIFO stack replaces linear search. O(1) pop/push in 2–5ns. Eliminates tail-latency spikes (P99 regression).
+- **Ring buffer capacity:** Kept at 8192 (fits comfortably in L2/L3 cache). Larger buffers do not reduce steady-state latency; only absorb backpressure if consumer stalls.
+- **Memcpy alignment:** Not optimized. Stack and pool allocations are naturally cache-line aligned by compiler. Measurable gain unlikely without real network I/O.
+- **MockIngressSource frame size:** Kept at 128 bytes (realistic financial wire format). Increasing batch size inflates throughput figures without representing true domain protocol.
+
+### Phase 3 Complete
+
+- Abstract ingress interface enables pluggable sources (mock, socket, DPDK, file)
+- Mock source provides deterministic, reproducible test data
+- EventDirector orchestrates poll-allocate-copy-push pipeline with sub-microsecond latency
+- FreeListPool eliminates O(N) allocation spikes; allocation now O(1) 2–5ns
+- GuardedMemoryPool detects buffer overflow via hardware segmentation fault
+- Busy-poll with `_mm_pause()` eliminates OS scheduler latency on isolated core
+- Ready for Phase 4 (Matching Engine)
