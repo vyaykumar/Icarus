@@ -42,6 +42,12 @@ target_include_directories(test_concurrent_ingestion PRIVATE src)
 target_link_libraries(test_concurrent_ingestion event_bus affinity GTest::gtest GTest::gtest_main Threads::Threads)
 target_compile_features(test_concurrent_ingestion PRIVATE cxx_std_26)
 
+# [P3]: Ingestion latency and throughput benchmark
+add_executable(test_ingestion_benchmark tests/test_ingestion_benchmark.cpp)
+target_include_directories(test_ingestion_benchmark PRIVATE src tests)
+target_link_libraries(test_ingestion_benchmark event_bus affinity GTest::gtest GTest::gtest_main Threads::Threads)
+target_compile_features(test_ingestion_benchmark PRIVATE cxx_std_26)
+
 enable_testing()
 #add_test(NAME event_bus_tests COMMAND test_event_bus)
 #add_test(NAME affinity_tests COMMAND test_affinity)
@@ -49,3 +55,4 @@ add_test(NAME publisher_subscriber_tests COMMAND test_publisher_subscriber)
 add_test(NAME event_director_tests COMMAND test_event_director)
 add_test(NAME guarded_pool_tests COMMAND test_guarded_pool)
 add_test(NAME concurrent_ingestion_tests COMMAND test_concurrent_ingestion)
+add_test(NAME ingestion_benchmark_tests COMMAND test_ingestion_benchmark)
