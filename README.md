@@ -4,8 +4,11 @@ High-performance trading backtesting infrastructure in C++26, targeting sub-micr
 
 ## Overview
 
-This project solves no problems. It is simply an evolution of scope and features from the previous project of Task-Dispatch, wishing to further my understanding into the domains of High-Performance Computing, and Parallel Programming, all while being constrained to a CPU. (I just lack a GPU, hence the CPU restraint.)
-This project implements a deterministic event-driven pipeline for replaying and testing trading strategies against historical market data. The focus is on understanding and implementing low-latency systems patterns: lock-free queues, CPU core isolation, memory pools, and hardware page protection.
+This project solves no new problems. 
+It is simply an evolution of scope and features from the previous project of Task-Dispatch, wishing to further my understanding into the domains of High-Performance Computing, and Parallel Programming, all while being constrained to a CPU. (I just lack a GPU, hence the CPU restraint).
+
+This project implements a deterministic event-driven pipeline for replaying and testing trading strategies against historical market data. 
+The focus is on understanding and implementing low-latency systems patterns: lock-free queues, CPU core isolation, memory pools, and hardware page protection.
 
 ## Current Status
 
@@ -177,7 +180,6 @@ Binding via `pthread_setaffinity_np()` at thread startup.
 ```
 .
 ├── CMakeLists.txt
-├── README.md
 ├── implementation.md
 ├── src/
 │   ├── transport/
@@ -302,6 +304,8 @@ On isolated cores, busy-polling with `_mm_pause()` eliminates OS scheduler laten
 - Shell script runner (load data, replay, execute, output P&L).
 
 **Phase 7: Documentation & Polish**
+- Organize files into appropriate directories.
+- Consolidate tests into a single global directory, maybe even providing run configurations.
 - Professional README (this file).
 - Inline comments on hard parts.
 - Benchmark results document.
