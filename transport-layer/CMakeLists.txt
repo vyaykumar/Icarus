@@ -30,8 +30,22 @@ add_executable(test_event_director tests/test_event_director.cpp)
 target_link_libraries(test_event_director event_bus affinity GTest::gtest GTest::gtest_main Threads::Threads)
 target_compile_features(test_event_director PRIVATE cxx_std_26)
 
+# [P3]: GuardedMemoryPool integration tests
+add_executable(test_guarded_pool tests/test_guarded_pool.cpp)
+target_include_directories(test_guarded_pool PRIVATE src)
+target_link_libraries(test_guarded_pool GTest::gtest GTest::gtest_main Threads::Threads)
+target_compile_features(test_guarded_pool PRIVATE cxx_std_26)
+
+# [P3]: Concurrent EventDirector + Subscriber test
+add_executable(test_concurrent_ingestion tests/test_concurrent_ingestion.cpp)
+target_include_directories(test_concurrent_ingestion PRIVATE src)
+target_link_libraries(test_concurrent_ingestion event_bus affinity GTest::gtest GTest::gtest_main Threads::Threads)
+target_compile_features(test_concurrent_ingestion PRIVATE cxx_std_26)
+
 enable_testing()
 #add_test(NAME event_bus_tests COMMAND test_event_bus)
 #add_test(NAME affinity_tests COMMAND test_affinity)
 add_test(NAME publisher_subscriber_tests COMMAND test_publisher_subscriber)
 add_test(NAME event_director_tests COMMAND test_event_director)
+add_test(NAME guarded_pool_tests COMMAND test_guarded_pool)
+add_test(NAME concurrent_ingestion_tests COMMAND test_concurrent_ingestion)

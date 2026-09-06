@@ -60,40 +60,36 @@ public:
         if (worker_.joinable()) worker_.join();
     }
 
+    uint64_t event_count() const {
+        return event_count_;
+    }
+
 private:
-    /// Worker thread entry point. Binds to core 2 and enters the event loop.
     void run() {
         core::bind_thread_to_core(worker_, 2);
         std::cout << "Debug: Subscriber thread bound to Core_2.\n";
+
         while (!shutdown_flag_.load(std::memory_order::relaxed)) {
-            std::unique_lock lock (notify_mutex_);
-            notify_cv_.wait(lock);
-
-            if (shutdown_flag_.load(std::memory_order::relaxed)) break;
-
-            //ingress placeholder.
-            // std::this_thread::sleep_for(std::chrono::nanoseconds(50));
-
             Event event;
-            if (!event_bus_.pop(event)) {
-                continue;
+            if (event_bus_.pop(event)) {
+                ++event_count_;
+
+                Handle handle = event.payload_handle;
+
+                uint8_t* payload = event_bus_.get_payload(handle);
+                if (!payload) {
+                    std::cerr << "Failed to resolve payload.\n";
+                    continue;
+                }
+
+                auto* data = reinterpret_cast<uint64_t*> (payload);
+                if (data) {
+                    uint64_t value = *data;
+                    std::cout << "Subscriber received payload: " << value << "\n";
+                }
+
+                event_bus_.deallocate_payload(handle);
             }
-
-            Handle handle = event.payload_handle;
-
-            uint8_t* payload = event_bus_.get_payload(handle);
-            if (!payload) {
-                std::cerr << "Failed to resolve payload.\n";
-                continue;
-            }
-
-            auto* data = reinterpret_cast<uint64_t*> (payload);
-            if (data) {
-                uint64_t value = *data;
-                std::cout << "Subscriber received payload: " << value << "\n";
-            }
-
-            event_bus_.deallocate_payload(handle);
         }
     }
 
@@ -102,6 +98,7 @@ private:
     std::atomic<bool> shutdown_flag_{false};
     std::mutex notify_mutex_;
     std::condition_variable notify_cv_;
+    std::atomic<uint64_t> event_count_ {};
 };
 
 }  // namespace icarus::subscriber
