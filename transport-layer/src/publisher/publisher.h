@@ -2,7 +2,7 @@
 #define ICARUS_PUBLISHER_H
 
 #include "../core/affinity.h"
-#include "../event_bus.h"
+#include "../transport/event_bus.h"
 
 #include <thread>
 #include <mutex>
