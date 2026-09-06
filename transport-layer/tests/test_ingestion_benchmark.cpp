@@ -12,7 +12,7 @@
 
 TEST(IngestionBenchmark, EventDirector_Latency_And_Throughput) {
     MockIngressSource ingress;
-    EventBus<16384, 16384> event_bus;
+    EventBus<8192, 8192> event_bus;
     Publisher publisher (event_bus);
     EventDirector director (ingress, publisher, event_bus);
 
@@ -79,3 +79,29 @@ TEST(IngestionBenchmark, EventDirector_Latency_And_Throughput) {
 // P50 latency: 56 ns
 // P95 latency: 248 ns
 // P99 latency: 531 ns
+
+/// With WSL overhead
+/// FreeListMemory instead of O(N) linear search.
+/// Subscriber yielding
+/// 8192 EventBus
+/// Director 10ns sleep
+// === Ingestion Benchmark Results ===
+// Events processed: 1000
+// Total time: 81563305 ns
+// Throughput: 12260.4 events/sec   (12% faster)
+// P50 latency: 33 ns               (41% faster)
+// P95 latency: 173 ns              (30% faster)
+// P99 latency: 336 ns              (37% faster)
+
+/// With WSL overhead
+/// FreeListMemory
+/// Subscriber yielding
+/// 8192 EventBus
+/// Director sleep, refactored with _mm_pause();
+// === Ingestion Benchmark Results ===
+// Events processed: 1000
+// Total time: 10579635 ns
+// Throughput: 94521.2 events/sec   (671% faster)
+// P50 latency: 24 ns               (27% faster)
+// P95 latency: 25 ns               (85% faster)
+// P99 latency: 35 ns               (90% faster)

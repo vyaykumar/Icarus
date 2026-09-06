@@ -7,6 +7,8 @@
 #include <atomic>
 #include <thread>
 
+#include <xmmintrin.h>
+
 using namespace icarus::publisher;
 
 template<typename EventBus>
@@ -81,7 +83,13 @@ void EventDirector<EventBus>::work_loop_() {
             work_latencies_.push_back(push_time - event.nano_stamp);
         }
 
-        std::this_thread::sleep_for(std::chrono::nanoseconds(10));
+        // std::this_thread::sleep_for(10ns);
+
+        #if defined(__x86_64__) || defined(_M_X64)
+                _mm_pause();
+        #elif defined(__aarch64__)
+                asm volatile("yield" ::: "memory");
+        #endif
     }
 }
 template<typename EventBus>
